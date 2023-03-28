@@ -8,8 +8,8 @@ contract MyToken is ERC20, Ownable {
 
     address private owner; // University of Michigan
 
-    mapping(address => Student.uniqname);
-    mapping(Student.uniqname => address);
+    mapping(address => string); //mapping that takes in address and gives the uniqname
+    mapping(string => Student); //mapping that takes in the uniquename and gives all student info
 
     enum Grade {
         Freshman,
