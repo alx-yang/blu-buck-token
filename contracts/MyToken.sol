@@ -11,13 +11,26 @@ contract MyToken is ERC20, Ownable {
     mapping(address => Student.uniqname);
     mapping(Student.uniqname => address);
 
+    enum Grade {
+        Freshman,
+        Sophomore,
+        Junior,
+        Senior,
+        Graduate
+    }
+
+    enum DiningPlan {
+        55,
+        85,
+        125,
+        unlimited
+    }
+
     struct Student {
         string uniqname;
         string name;
-        string grade;
-        string diningPlan;
-        string school;
-        string major;
+        Grade grade;
+        DiningPlan diningPlan;
         uint32 UMID;
     }
 
