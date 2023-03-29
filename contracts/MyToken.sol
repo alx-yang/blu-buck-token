@@ -5,11 +5,10 @@ import "node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "node_modules/@openzeppelin/contracts/access/Ownable.sol";
 
 contract MyToken is ERC20, Ownable {
-
     // University of Michigan deploys contract
-    address private owner; 
+    address private owner;
 
-    mapping(address => Student) private addressToStudent; // address to uniqname (internal)
+    mapping(address => Student) private addressToStudent; // address to uniqname (internal student identifier)
     mapping(string => address) private uniqnameToAddress; // uniqname to address (external)
 
     enum Grade {
@@ -43,8 +42,21 @@ contract MyToken is ERC20, Ownable {
     }
 
     function buyFood(address from, uint256 amount) public {
-        require (balanceOf(from) - amount >= 0);
+        require(balanceOf(from) - amount >= 0);
         _transfer(from, owner, amount);
     }
-
+    
+    /*
+    TO DO (override these functions)
+        transfer
+        allowance
+        approve
+        transferFrom
+        increaseAllowance
+        decreaseAllowance
+        _transfer
+        _mint
+        _burn
+        _approve
+        _beforeTokenTransfer */
 }
