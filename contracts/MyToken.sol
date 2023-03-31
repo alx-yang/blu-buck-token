@@ -38,6 +38,7 @@ contract MyToken is ERC20, Ownable {
     constructor() ERC20("BlueBuckToken", "BBT") {}
 
     function mint(address to, uint256 amount) public onlyOwner {
+        //Student s = addressToStudent[to];
         _mint(to, amount);
     }
 
@@ -45,18 +46,12 @@ contract MyToken is ERC20, Ownable {
         require(balanceOf(from) - amount >= 0);
         _transfer(from, owner, amount);
     }
+
+    function transfer(string memory uniq1, string memory uniq2, uint256 amount) public {
+        address address1 = uniqnameToAddress[uniq1];
+        address address2 = uniqnameToAddress[uniq2];
+        _transfer(address1, address2, amount);
+    }
     
-    /*
-    TO DO (override these functions)
-        transfer
-        allowance
-        approve
-        transferFrom
-        increaseAllowance
-        decreaseAllowance
-        _transfer
-        _mint
-        _burn
-        _approve
-        _beforeTokenTransfer */
+    
 }
