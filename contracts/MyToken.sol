@@ -67,7 +67,7 @@ contract MyToken is ERC20, Ownable {
         addressToStudent[msg.sender.address].diningPlan = _diningPlan;
 
         students++;
-        //indexToAddress[students] = msg.sender.address;
+        indexToAddress[students] = msg.sender.address;
 
         Account_Created(msg.sender.address);
     }
