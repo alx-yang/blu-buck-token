@@ -7,12 +7,13 @@ import "node_modules/@openzeppelin/contracts/access/Ownable.sol";
 contract MyToken is ERC20, Ownable {
     // University of Michigan deploys contract
     address private owner;
-
     uint256 private reserve;
 
     mapping(address => Student) private addressToStudent; // address to uniqname (internal student identifier)
     mapping(string => address) private uniqnameToAddress; // uniqname to address (external)
     mapping(string => int) private diningPlan; // returns the number of bluBucks for a specified dining plan
+
+    event Account_Created(address indexed creator);
 
     enum Grade {
         Freshman,
@@ -27,7 +28,7 @@ contract MyToken is ERC20, Ownable {
         string uniqname;
         string name;
         uint32 UMID;
-        Grade grade;
+        string grade;
     }
 
     constructor() ERC20("BlueBuckToken", "BBT") {
@@ -57,12 +58,18 @@ contract MyToken is ERC20, Ownable {
         _transfer(address1, address2, amount);
     }
 
-    function createAccount(string memory _uniqname, string memory _id, string memory _name) public {
+    uint104 private students;
+    function createAccount(string memory _uniqname, string memory _name, string memory _id, string memory _grade, string memory _diningPlan) public {
         addressToStudent[msg.sender.address].uniqname = _uniqname;
-    }
+        addressToStudent[msg.sender.address].name = _uniqname;
+        addressToStudent[msg.sender.address].UMID = _uniqname;
+        addressToStudent[msg.sender.address].grade = _grade;
+        addressToStudent[msg.sender.address].diningPlan = _diningPlan;
 
-    function getBluBuck(string memory uniqname, string memory name, ) public {
-        
+        students++;
+        //indexToAddress[students] = msg.sender.address;
+
+        Account_Created(msg.sender.address);
     }
 
     function buyBluBuck(string memory uniqname, uint8 ethereum) public {
