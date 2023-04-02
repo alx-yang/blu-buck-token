@@ -49,17 +49,22 @@ contract MyToken is ERC20, Ownable {
         _transfer(from, owner, amount);
     }
 
-    function transfer(string memory uniq1, string memory uniq2, uint256 amount) public {
-        address address1 = uniqnameToAddress[uniq1];
+    function transfer(string memory uniq2, uint256 amount) public {
+        address address1 = msg.sender.address;
         address address2 = uniqnameToAddress[uniq2];
         _transfer(address1, address2, amount);
     }
 
-    function getBluBuck(string uniqname, string name) public {
+    function createAccount(string memory _uniqname, string memory _id, string memory _name) public {
+        addressToStudent[msg.sender.address].uniqname = _uniqname;
+    }
+
+    function getBluBuck(string memory uniqname, string memory name, ) public {
 
     }
 
-    function buyBluBuck() public {
+    function buyBluBuck(uint8 asdflkj) public {
+
 
     }
 
