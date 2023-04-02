@@ -60,12 +60,14 @@ contract MyToken is ERC20, Ownable {
     }
 
     function getBluBuck(string memory uniqname, string memory name, ) public {
-
+        
     }
 
-    function buyBluBuck(uint8 asdflkj) public {
-
-
+    function buyBluBuck(string memory uniqname, uint8 ethereum) public {
+        uint256 bbtamount = ethereum * 0.01;
+        address user = uniqnameToAddress[uniqname];
+        _transfer(owner, user, bbtamount);
+        reserve -= bbtamount;
     }
 
     function giveBluBuck() public onlyOwner {
