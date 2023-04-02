@@ -42,11 +42,13 @@ contract MyToken is ERC20, Ownable {
     function mint(address to, uint256 amount) public onlyOwner {
         //Student s = addressToStudent[to];
         _mint(to, amount);
+        reserve += amount;
     }
 
     function buyFood(address from, uint256 amount) public {
         require(balanceOf(from) - amount >= 0);
         _transfer(from, owner, amount);
+        reserve += amount;
     }
 
     function transfer(string memory uniq2, uint256 amount) public {
