@@ -8,6 +8,7 @@ contract MyToken is ERC20, Ownable {
     // University of Michigan deploys contract
     address private owner;
     uint256 private reserve;
+    uint16 private constant CONVERSION_RATE = 1800;
 
     uint256 students;
 
@@ -44,13 +45,13 @@ contract MyToken is ERC20, Ownable {
     }
     
 
-    function mint(address to, uint256 amount) public onlyOwner {
+    function mint(address to, uint256 amount) external onlyOwner {
         //Student s = addressToStudent[to];
         _mint(to, amount);
         reserve += amount;
     }
 
-    function buyFood(address from, uint256 amount) public {
+    function buyFood(address from, uint256 amount) external {
         require(balanceOf(from) - amount >= 0);
         _transfer(from, owner, amount);
         reserve += amount;
@@ -62,7 +63,7 @@ contract MyToken is ERC20, Ownable {
         _transfer(address1, address2, amount);
     }
 
-    function createAccount(string memory _uniqname, string memory _name, uint8 _id, string memory _grade, string memory _diningPlan) public {
+    function createAccount(string memory _uniqname, string memory _name, uint8 _id, string memory _grade, string memory _diningPlan) external {
         addressToStudent[msg.sender].uniqname = _uniqname;
         addressToStudent[msg.sender].name = _name;
         addressToStudent[msg.sender].UMID = _id;
@@ -75,15 +76,15 @@ contract MyToken is ERC20, Ownable {
         Account_Created(msg.sender);
     }
 
-    function buyBluBuck(string memory uniqname, uint8 ethereum) public {
-        uint256 bbtamount = ethereum * 0.01;
+    function buyBluBuck(string memory uniqname) external payable { // FIX THIS
+        uint256 bbtamount = msg.value * CONVERSION_RATE;
         address user = uniqnameToAddress[uniqname];
         //_transfer(owner, user, bbtamount);
         reserve -= bbtamount;
     }
 
     function giveBluBuck() public onlyOwner {
-
+        // MIHIR
     }
     
 }
