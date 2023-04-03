@@ -9,6 +9,9 @@ contract MyToken is ERC20, Ownable {
     address private owner;
     uint256 private reserve;
 
+    uint256 students;
+
+    mapping(uint256 => address) private indexToAddress;
     mapping(address => Student) private addressToStudent; // address to uniqname (internal student identifier)
     mapping(string => address) private uniqnameToAddress; // uniqname to address (external)
     mapping(string => int) private diningPlan; // returns the number of bluBucks for a specified dining plan
@@ -29,14 +32,15 @@ contract MyToken is ERC20, Ownable {
         string name;
         uint32 UMID;
         string grade;
+        string diningPlan;
     }
 
     constructor() ERC20("BlueBuckToken", "BBT") {
-        diningPlan("NONE") = 0;
-        diningPlan("55 BLOCK") = 50;
-        diningPlan("80 BLOCK") = 300;
-        diningPlan("125 BLOCK") = 250;
-        diningPlan("UNLIMITED") = 25;
+        diningPlan["NONE"] = 0;
+        diningPlan["55 BLOCK"] = 50;
+        diningPlan["80 BLOCK"] = 300;
+        diningPlan["125 BLOCK"] = 250;
+        diningPlan["UNLIMITED"] = 25;
     }
     
 
@@ -53,29 +57,28 @@ contract MyToken is ERC20, Ownable {
     }
 
     function transfer(string memory uniq2, uint256 amount) public {
-        address address1 = msg.sender.address;
+        address address1 = _msgSender();
         address address2 = uniqnameToAddress[uniq2];
         _transfer(address1, address2, amount);
     }
 
-    uint104 private students;
-    function createAccount(string memory _uniqname, string memory _name, string memory _id, string memory _grade, string memory _diningPlan) public {
-        addressToStudent[msg.sender.address].uniqname = _uniqname;
-        addressToStudent[msg.sender.address].name = _uniqname;
-        addressToStudent[msg.sender.address].UMID = _uniqname;
-        addressToStudent[msg.sender.address].grade = _grade;
-        addressToStudent[msg.sender.address].diningPlan = _diningPlan;
+    function createAccount(string memory _uniqname, string memory _name, uint8 _id, string memory _grade, string memory _diningPlan) public {
+        addressToStudent[msg.sender].uniqname = _uniqname;
+        addressToStudent[msg.sender].name = _name;
+        addressToStudent[msg.sender].UMID = _id;
+        addressToStudent[msg.sender].grade = _grade;
+        addressToStudent[msg.sender].diningPlan = _diningPlan;
 
         students++;
-        indexToAddress[students] = msg.sender.address;
+        indexToAddress[students] = msg.sender;
 
-        Account_Created(msg.sender.address);
+        Account_Created(msg.sender);
     }
 
     function buyBluBuck(string memory uniqname, uint8 ethereum) public {
         uint256 bbtamount = ethereum * 0.01;
         address user = uniqnameToAddress[uniqname];
-        _transfer(owner, user, bbtamount);
+        //_transfer(owner, user, bbtamount);
         reserve -= bbtamount;
     }
 
