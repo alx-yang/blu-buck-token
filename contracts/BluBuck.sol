@@ -5,22 +5,25 @@ import "node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "node_modules/@openzeppelin/contracts/access/Ownable.sol";
 
 contract BluBuck is Ownable {
-
     event Transfer(address indexed from, address indexed to, uint tokens);
     event Account_Created(address indexed creator);
+    event High_Demand();
 
     string public constant name = "BluBuck";
     string public constant symbol = "UMBB";
     uint8 public constant decimals = 18;
     uint16 private constant CONVERSION_RATE = 1800;
 
-    mapping(address => uint256) balances;
-    mapping(address => uint256) buyable_balances;
-    mapping(string => address) uniqnames;
-    mapping(address => bool) account_created;
+    uint16 private totalStudents = 0;
 
-    //mapping(uint256 => address) private indexToAddress;
+    mapping(address => uint256) private balances;
+    mapping(address => uint256) private buyable_balances;
+    mapping(string => address) private uniqnames;
+    mapping(address => bool) private account_created;
+    mapping(uint256 => address) private indexToAddress; // index 1 is the first student
     mapping(address => Student) private addressToStudent; // address to uniqname (internal student identifier)
+    mapping(string => uint256) private diningPlan; // returns the number of bluBucks for a specified dining plan
+    mapping(string => uint256) private bluBucksSpent; // where bluBucks are spent by students
 
     struct Student {
         string uniqname;
@@ -30,13 +33,8 @@ contract BluBuck is Ownable {
         string diningPlan;
     }
 
-    mapping(string => uint256) private diningPlan; // returns the number of bluBucks for a specified dining plan
-
-    uint256 reserve; //this shouldn't be called total supply, should be caled school's supply??
-
     constructor(uint256 total) {
-        reserve = total;
-        balances[owner()] = reserve; //address of the owner gets the totalsupply correct?
+        _mint(total);
 
         diningPlan["NONE"] = 0;
         diningPlan["55 BLOCK"] = 50;
@@ -49,7 +47,11 @@ contract BluBuck is Ownable {
      * students can buy "buyable" bluBucks from other students with wei, given that the seller has enough bluBucks
      */
     function buyBluBuckFrom(string memory uniqname) external payable {
-        require(_buyableBalanceOf(uniqnames[uniqname]) >= msg.value * CONVERSION_RATE, "Seller does not have enough BluBucks.");
+        require(
+            _buyableBalanceOf(uniqnames[uniqname]) >=
+                msg.value * CONVERSION_RATE,
+            "Seller does not have enough BluBucks."
+        );
         payable(uniqnames[uniqname]).transfer(msg.value);
         buyable_balances[uniqnames[uniqname]] -= msg.value * CONVERSION_RATE;
         balances[msg.sender] += msg.value * CONVERSION_RATE;
@@ -67,19 +69,29 @@ contract BluBuck is Ownable {
      * students can buy food from the school with this function. the main purpose of blubucks
      * @param amount blubucks' worth of food students wants to buy
      */
-    function buyFood(uint256 amount) external {
+    function buyFood(string memory location, uint256 amount) external {
         require(_balanceOf(msg.sender) >= amount, "Not enough funds.");
         _transfer(owner(), msg.sender, amount);
+        bluBucksSpent[location] += amount;
         emit Transfer(msg.sender, owner(), amount);
     }
 
-    function addStudent(string memory _uniqname, string memory _name, 
-      uint8 _id, uint256 _grade, string memory _diningPlan) external {
+    //need to make sure this student does not already exist
+    modifier creatable() {
+        require(
+            account_created[msg.sender] == false && msg.sender != owner(),
+            "Account has already been created"
+        );
+        _;
+    }
 
-        //need to make sure this student does not already exist, otherwise 
-        //a person can just keep making new accounts and get free blue bucks
-        require(account_created[msg.sender] == false, "Account has already been created");
-
+    function addStudent(
+        string memory _uniqname,
+        string memory _name,
+        uint8 _id,
+        uint256 _grade,
+        string memory _diningPlan
+    ) external creatable {
         addressToStudent[msg.sender].uniqname = _uniqname;
         addressToStudent[msg.sender].name = _name;
         addressToStudent[msg.sender].UMID = _id;
@@ -88,6 +100,9 @@ contract BluBuck is Ownable {
 
         _giveBluBuck(msg.sender);
         account_created[msg.sender] = true;
+
+        totalStudents++;
+        indexToAddress[totalStudents] = msg.sender;
 
         emit Account_Created(msg.sender);
     }
@@ -100,7 +115,9 @@ contract BluBuck is Ownable {
         return _balanceOf(uniqnames[uniqname]);
     }
 
-    function buyableBalanceOf(string memory uniqname) external view returns (uint) {
+    function buyableBalanceOf(
+        string memory uniqname
+    ) external view returns (uint) {
         return _balanceOf(uniqnames[uniqname]);
     }
 
@@ -110,7 +127,10 @@ contract BluBuck is Ownable {
      * @param uniq uniqname of recipient
      * @param numTokens amount to send
      */
-    function transfer(string memory uniq, uint numTokens) public returns (bool) {
+    function transfer(
+        string memory uniq,
+        uint numTokens
+    ) public returns (bool) {
         _transfer(uniqnames[uniq], msg.sender, numTokens);
         return false;
     }
@@ -121,13 +141,31 @@ contract BluBuck is Ownable {
      */
     function buyBluBuck(string memory uniq) external payable {
         uint256 bbtamount = msg.value * CONVERSION_RATE;
-        require(reserve > bbtamount); //need to change this with an if else statement, where we mint if our totalsupply is less
-        address user = uniqnames[uniq];
-
-        _transfer(user, owner(), bbtamount);
-        reserve -= bbtamount;
+        if (balances[owner()] < bbtamount) {
+            _mint(bbtamount);
+            emit High_Demand();
+        }
+        require(balances[owner()] < bbtamount, "There is a bug here");
+        _transfer(uniqnames[uniq], owner(), bbtamount);
+        balances[owner()] -= bbtamount;
     }
 
+    function mint(uint256 amount) external onlyOwner {
+        _mint(amount);
+    }
+
+    function newSemester() external onlyOwner {
+        for (uint i = 0; i < totalStudents; i++) {
+            _giveBluBuck(indexToAddress[i + 1]);
+        }
+    }
+
+    function getBluBucksSpent(
+        string memory location
+    ) external view returns (uint) {
+        // returns the total number of bluBucks spent at a single location
+        return bluBucksSpent[location];
+    }
 
     /*HELPER FUNCTIONS BELOW*/
 
@@ -137,7 +175,11 @@ contract BluBuck is Ownable {
      * @param from sender
      * @param numTokens amount to send
      */
-    function _transfer(address to, address from, uint numTokens) private returns (bool) {
+    function _transfer(
+        address to,
+        address from,
+        uint numTokens
+    ) private returns (bool) {
         require(numTokens <= balances[from], "Not enough funds.");
         balances[from] -= numTokens;
         balances[to] += numTokens;
@@ -167,5 +209,9 @@ contract BluBuck is Ownable {
         uint256 amount = diningPlan[addressToStudent[student].diningPlan];
         balances[student] = amount;
         buyable_balances[student] = 0;
+    }
+
+    function _mint(uint256 amount) private {
+        balances[owner()] += amount; // balance of owner is reserve
     }
 }
