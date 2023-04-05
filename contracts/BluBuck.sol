@@ -15,6 +15,7 @@ contract BluBuck is Ownable {
     uint16 private constant CONVERSION_RATE = 1800;
 
     mapping(address => uint256) balances;
+    mapping(address => uint256) buyable_balances;
     mapping(string => address) uniqnames;
 
     //mapping(uint256 => address) private indexToAddress;
@@ -43,10 +44,23 @@ contract BluBuck is Ownable {
         diningPlan["UNLIMITED"] = 25;
     }
 
-//======================================
-    //final transfer function: a payable function where a user can send ethereum to a person in exchange for blubucks in return
-    //how would we do this?
-//======================================
+    /**
+     * students can buy "buyable" bluBucks from other students with wei, given that the seller has enough bluBucks
+     */
+    function buyBluBuckFrom(string memory uniqname) external payable {
+        require(_buyableBalanceOf(uniqnames[uniqname]) >= msg.value * CONVERSION_RATE, "Seller does not have enough BluBucks.");
+        payable(uniqnames[uniqname]).transfer(msg.value);
+        buyable_balances[uniqnames[uniqname]] -= msg.value * CONVERSION_RATE;
+        balances[msg.sender] += msg.value * CONVERSION_RATE;
+    }
+
+    /**
+     * students can put bluBucks on the market for other students to buy
+     */
+    function makeSellable(uint256 amount) external {
+        require(_balanceOf(msg.sender) >= amount, "Not enough funds.");
+        buyable_balances[msg.sender] = amount;
+    }
 
     /**
      * students can buy food from the school with this function. the main purpose of blubucks
@@ -80,6 +94,10 @@ contract BluBuck is Ownable {
      * @param uniqname student wishing to check their balance
      */
     function balanceOf(string memory uniqname) external view returns (uint) {
+        return _balanceOf(uniqnames[uniqname]);
+    }
+
+    function buyableBalanceOf(string memory uniqname) external view returns (uint) {
         return _balanceOf(uniqnames[uniqname]);
     }
 
@@ -132,6 +150,10 @@ contract BluBuck is Ownable {
         return balances[tokenOwner];
     }
 
+    function _buyableBalanceOf(address tokenOwner) private view returns (uint) {
+        return buyable_balances[tokenOwner];
+    }
+
     /**
      * general giveblubuck function. called by createaccount, and if we choose to simulate a new semester, then this function will be called
      * in repopulating the students' accounts according to their dining plan.
@@ -141,5 +163,6 @@ contract BluBuck is Ownable {
         //address => student => diningplan => amount -> put this into balance
         uint256 amount = diningPlan[addressToStudent[student].diningPlan];
         balances[student] = amount;
+        buyable_balances[student] = 0;
     }
 }
