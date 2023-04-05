@@ -17,6 +17,7 @@ contract BluBuck is Ownable {
     mapping(address => uint256) balances;
     mapping(address => uint256) buyable_balances;
     mapping(string => address) uniqnames;
+    mapping(address => bool) account_created;
 
     //mapping(uint256 => address) private indexToAddress;
     mapping(address => Student) private addressToStudent; // address to uniqname (internal student identifier)
@@ -77,6 +78,7 @@ contract BluBuck is Ownable {
 
         //need to make sure this student does not already exist, otherwise 
         //a person can just keep making new accounts and get free blue bucks
+        require(account_created[msg.sender] == false, "Account has already been created");
 
         addressToStudent[msg.sender].uniqname = _uniqname;
         addressToStudent[msg.sender].name = _name;
@@ -85,6 +87,7 @@ contract BluBuck is Ownable {
         addressToStudent[msg.sender].diningPlan = _diningPlan;
 
         _giveBluBuck(msg.sender);
+        account_created[msg.sender] = true;
 
         emit Account_Created(msg.sender);
     }
