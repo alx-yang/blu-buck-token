@@ -30,11 +30,11 @@ contract BluBuck is Ownable {
 
     mapping(string => uint256) private diningPlan; // returns the number of bluBucks for a specified dining plan
 
-    uint256 totalSupply_; //this shouldn't be called total supply, should be caled school's supply??
+    uint256 reserve; //this shouldn't be called total supply, should be caled school's supply??
 
     constructor(uint256 total) {
-        totalSupply_ = total;
-        balances[owner()] = totalSupply_; //address of the owner gets the totalsupply correct?
+        reserve = total;
+        balances[owner()] = reserve; //address of the owner gets the totalsupply correct?
 
         diningPlan["NONE"] = 0;
         diningPlan["55 BLOCK"] = 50;
@@ -43,9 +43,18 @@ contract BluBuck is Ownable {
         diningPlan["UNLIMITED"] = 25;
     }
 
+//======================================
+    //final transfer function: a payable function where a user can send ethereum to a person in exchange for blubucks in return
+    //how would we do this?
+//======================================
+
+    /**
+     * students can buy food from the school with this function. the main purpose of blubucks
+     * @param amount blubucks' worth of food students wants to buy
+     */
     function buyFood(uint256 amount) external {
         require(_balanceOf(msg.sender) >= amount, "Not enough funds.");
-        transfer(owner(), amount);
+        _transfer(owner(), msg.sender, amount);
         emit Transfer(msg.sender, owner(), amount);
     }
 
@@ -61,45 +70,52 @@ contract BluBuck is Ownable {
         addressToStudent[msg.sender].grade = _grade;
         addressToStudent[msg.sender].diningPlan = _diningPlan;
 
-        giveBluBuck(msg.sender);
+        _giveBluBuck(msg.sender);
 
         emit Account_Created(msg.sender);
     }
 
-    //function gets called by createaccount to give student money based on diningplan
-    function giveBluBuck(address student) private {
-        //address => student => diningplan => amount -> put this into balance
-        uint256 amount = diningPlan[addressToStudent[student].diningPlan];
-        balances[student] = amount;
-    }
-
-    //function to be used by members on blockchain
+    /**
+     * allows students to check their balance
+     * @param uniqname student wishing to check their balance
+     */
     function balanceOf(string memory uniqname) external view returns (uint) {
         return _balanceOf(uniqnames[uniqname]);
     }
 
-    //user sends blu bucks to another user
-    function transfer(address to, uint numTokens) public returns (bool) {
-        _transfer(to, msg.sender, numTokens);
+    /**
+     * caller of this function sends a specified amount to intended recipient. this function will be primarily
+     * called by top level function that exchanges ether for blubucks
+     * @param uniq uniqname of recipient
+     * @param numTokens amount to send
+     */
+    function transfer(string memory uniq, uint numTokens) public returns (bool) {
+        _transfer(uniqnames[uniq], msg.sender, numTokens);
         return false;
     }
 
-    //final transfer function: a payable function where a user can send ethereum to a person in exchange for blubucks in return
-    //how would we do this?
-
+    /**
+     * students can buy blubucks from the school with this function in exchange for some ether
+     * @param uniq uniqname of student buying blubucks
+     */
     function buyBluBuck(string memory uniq) external payable {
         uint256 bbtamount = msg.value * CONVERSION_RATE;
-        require(totalSupply_ > bbtamount); //need to change this with an if else statement, where we mint if our totalsupply is less
+        require(reserve > bbtamount); //need to change this with an if else statement, where we mint if our totalsupply is less
         address user = uniqnames[uniq];
 
         _transfer(user, owner(), bbtamount);
-        totalSupply_ -= bbtamount;
+        reserve -= bbtamount;
     }
 
 
     /*HELPER FUNCTIONS BELOW*/
 
-    //general transfer function, to be used by other functions in the class
+    /**
+     * general transfer function, to be used by other functions in the class
+     * @param to recipient
+     * @param from sender
+     * @param numTokens amount to send
+     */
     function _transfer(address to, address from, uint numTokens) private returns (bool) {
         require(numTokens <= balances[from], "Not enough funds.");
         balances[from] -= numTokens;
@@ -108,8 +124,22 @@ contract BluBuck is Ownable {
         return true;
     }
 
-    //create a top-level function that takes in a uniqname, and calls this function with the corresponding address
+    /**
+     * create a top-level function that takes in a uniqname, and calls this function with the corresponding address
+     * @param tokenOwner address to get balance from
+     */
     function _balanceOf(address tokenOwner) private view returns (uint) {
         return balances[tokenOwner];
+    }
+
+    /**
+     * general giveblubuck function. called by createaccount, and if we choose to simulate a new semester, then this function will be called
+     * in repopulating the students' accounts according to their dining plan.
+     * @param student address of student
+     */
+    function _giveBluBuck(address student) private {
+        //address => student => diningplan => amount -> put this into balance
+        uint256 amount = diningPlan[addressToStudent[student].diningPlan];
+        balances[student] = amount;
     }
 }
