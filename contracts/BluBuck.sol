@@ -54,6 +54,7 @@ contract BluBuck is Ownable {
         );
         payable(uniqnames[uniqname]).transfer(msg.value);
         buyable_balances[uniqnames[uniqname]] -= msg.value * CONVERSION_RATE;
+        balances[uniqnames[uniqname]] -= msg.value * CONVERSION_RATE;
         balances[msg.sender] += msg.value * CONVERSION_RATE;
     }
 
@@ -118,7 +119,7 @@ contract BluBuck is Ownable {
     function buyableBalanceOf(
         string memory uniqname
     ) external view returns (uint) {
-        return _balanceOf(uniqnames[uniqname]);
+        return _buyableBalanceOf(uniqnames[uniqname]);
     }
 
     /**
