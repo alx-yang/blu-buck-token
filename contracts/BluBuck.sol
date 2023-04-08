@@ -11,8 +11,8 @@ contract BluBuck is Ownable {
 
     string public constant name = "BluBuck";
     string public constant symbol = "UMBB";
-    uint8 public constant decimals = 18;
-    uint16 private constant CONVERSION_RATE = 1800;
+    uint8 private constant decimals = 18;
+    uint16 private constant CONVERSION_RATE = 2;
 
     uint16 private totalStudents = 0;
 
@@ -29,7 +29,7 @@ contract BluBuck is Ownable {
         string uniqname;
         string name;
         uint32 UMID;
-        uint256 grade;
+        string grade;
         string diningPlan;
     }
 
@@ -43,10 +43,67 @@ contract BluBuck is Ownable {
         diningPlan["UNLIMITED"] = 25;
     }
 
+    //need to make sure this student does not already exist
+    modifier creatable() {
+        require(
+            account_created[msg.sender] == false && msg.sender != owner(),
+            "Account has already been created (Note: owners cannot create accounts)"
+        );
+        _;
+    }
+
+    // make sure account is in the system
+    modifier inSystem() {
+        require(
+            account_created[msg.sender] == true,
+            "You must call addStudent before using this function (Only students can call this function)"
+        );
+        _;
+    }
+
+    function addStudent(
+        string memory _uniqname,
+        string memory _name,
+        uint32 _id,
+        string memory _grade,
+        string memory _diningPlan
+    ) external creatable {
+        addressToStudent[msg.sender].uniqname = _uniqname;
+        addressToStudent[msg.sender].name = _name;
+        addressToStudent[msg.sender].UMID = _id;
+        addressToStudent[msg.sender].grade = _grade;
+        addressToStudent[msg.sender].diningPlan = _diningPlan;
+
+        _giveBluBuck(msg.sender);
+        account_created[msg.sender] = true;
+
+        uniqnames[_uniqname] = msg.sender;
+
+        totalStudents++;
+        indexToAddress[totalStudents] = msg.sender;
+
+        emit Account_Created(msg.sender);
+    }
+
+    /**
+     * students can buy blubucks from the school with this function in exchange for some ether
+     */
+    function buyBluBuck() external inSystem payable {
+        uint256 bbtamount = msg.value * CONVERSION_RATE;
+        if (balances[owner()] < bbtamount) {
+            _mint(bbtamount);
+            emit High_Demand();
+        }
+        require(balances[owner()] >= bbtamount, "There is a bug here");
+        _transfer(msg.sender, owner(), bbtamount);
+        balances[owner()] -= bbtamount;
+    }
+
     /**
      * students can buy "buyable" bluBucks from other students with wei, given that the seller has enough bluBucks
      */
-    function buyBluBuckFrom(string memory uniqname) external payable {
+    function buyBluBuckFrom(string memory uniqname) external payable inSystem {
+        require(uniqnames[uniqname] != address(0), "You have not entered a valid uniqname");
         require(
             _buyableBalanceOf(uniqnames[uniqname]) >=
                 msg.value * CONVERSION_RATE,
@@ -61,7 +118,7 @@ contract BluBuck is Ownable {
     /**
      * students can put bluBucks on the market for other students to buy
      */
-    function makeSellable(uint256 amount) external {
+    function makeSellable(uint256 amount) external inSystem {
         require(_balanceOf(msg.sender) >= amount, "Not enough funds.");
         buyable_balances[msg.sender] = amount;
     }
@@ -70,85 +127,42 @@ contract BluBuck is Ownable {
      * students can buy food from the school with this function. the main purpose of blubucks
      * @param amount blubucks' worth of food students wants to buy
      */
-    function buyFood(string memory location, uint256 amount) external {
+    function buyFood(string memory location, uint256 amount) external inSystem {
         require(_balanceOf(msg.sender) >= amount, "Not enough funds.");
         _transfer(owner(), msg.sender, amount);
         bluBucksSpent[location] += amount;
         emit Transfer(msg.sender, owner(), amount);
     }
 
-    //need to make sure this student does not already exist
-    modifier creatable() {
-        require(
-            account_created[msg.sender] == false && msg.sender != owner(),
-            "Account has already been created"
-        );
-        _;
-    }
-
-    function addStudent(
-        string memory _uniqname,
-        string memory _name,
-        uint8 _id,
-        uint256 _grade,
-        string memory _diningPlan
-    ) external creatable {
-        addressToStudent[msg.sender].uniqname = _uniqname;
-        addressToStudent[msg.sender].name = _name;
-        addressToStudent[msg.sender].UMID = _id;
-        addressToStudent[msg.sender].grade = _grade;
-        addressToStudent[msg.sender].diningPlan = _diningPlan;
-
-        _giveBluBuck(msg.sender);
-        account_created[msg.sender] = true;
-
-        totalStudents++;
-        indexToAddress[totalStudents] = msg.sender;
-
-        emit Account_Created(msg.sender);
-    }
-
     /**
      * allows students to check their balance
-     * @param uniqname student wishing to check their balance
      */
-    function balanceOf(string memory uniqname) external view returns (uint) {
-        return _balanceOf(uniqnames[uniqname]);
+    function myBalance() external view returns (uint) {
+        require(
+            account_created[msg.sender] == true || msg.sender == owner(),
+            "You must call addStudent before using this function"
+        );
+        return _balanceOf(msg.sender);
     }
 
-    function buyableBalanceOf(
-        string memory uniqname
-    ) external view returns (uint) {
+    function buyableBalanceOf(string memory uniqname) external view inSystem returns (uint) {
+        require(uniqnames[uniqname] != address(0), "You have not entered a valid uniqname");
         return _buyableBalanceOf(uniqnames[uniqname]);
     }
 
     /**
      * caller of this function sends a specified amount to intended recipient. this function will be primarily
      * called by top level function that exchanges ether for blubucks
-     * @param uniq uniqname of recipient
+     * @param uniqname uniqname of recipient
      * @param numTokens amount to send
      */
     function transfer(
-        string memory uniq,
+        string memory uniqname,
         uint numTokens
-    ) public returns (bool) {
-        _transfer(uniqnames[uniq], msg.sender, numTokens);
+    ) public inSystem returns (bool) {
+        require(uniqnames[uniqname] != address(0), "You have not entered a valid uniqname");
+        _transfer(uniqnames[uniqname], msg.sender, numTokens);
         return false;
-    }
-
-    /**
-     * students can buy blubucks from the school with this function in exchange for some ether
-     * @param uniq uniqname of student buying blubucks
-     */
-    function buyBluBuck(string memory uniq) external payable {
-        uint256 bbtamount = msg.value * CONVERSION_RATE;
-        if (balances[owner()] < bbtamount) {
-            _mint(bbtamount);
-            emit High_Demand();
-        }
-        require(balances[owner()] < bbtamount, "There is a bug here");
-        _transfer(uniqnames[uniq], owner(), bbtamount);
-        balances[owner()] -= bbtamount;
     }
 
     function mint(uint256 amount) external onlyOwner {
