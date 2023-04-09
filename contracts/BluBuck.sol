@@ -96,7 +96,6 @@ contract BluBuck is Ownable {
         }
         require(balances[owner()] >= bbtamount, "There is a bug here");
         _transfer(msg.sender, owner(), bbtamount);
-        balances[owner()] -= bbtamount;
     }
 
     /**
